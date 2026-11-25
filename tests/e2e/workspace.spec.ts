@@ -19,6 +19,25 @@ async function mock(page:any,conflict=false){
 }
 async function login(page:any){await page.goto('/career-radar-web/');await page.getByLabel('GitHub 저장소 접근 토큰').fill('synthetic-test-token');await page.getByRole('button',{name:'연결하기',exact:true}).click();await expect(page.getByRole('heading',{name:'다음 기회를 준비하는 오늘'})).toBeVisible();}
 test('anonymous shell contains no personal records or persistent credentials',async({page})=>{await page.goto('/career-radar-web/');await expect(page.getByRole('heading',{name:'워크스페이스 연결'})).toBeVisible();await expect(page.getByText('테스트 기업',{exact:true})).toHaveCount(0);expect(await page.evaluate(()=>Object.keys(localStorage))).toEqual([]);});
+for(const failure of [
+ {path:'',stage:'저장소 접근'},
+ {path:'/git/ref/heads/main',stage:'데이터 버전 조회'},
+ {path:'/contents/data/private/user.json',stage:'데이터 파일 조회'},
+])test(`404 diagnosis: ${failure.stage}`,async({page})=>{
+ await mock(page);
+ await page.route(url=>url.origin==='https://api.github.com'&&url.pathname==='/repos/Navv6/career-radar'+failure.path,route=>route.fulfill({status:404,json:{message:'Not Found'}}));
+ await page.goto('/career-radar-web/');
+ await page.getByLabel('GitHub 저장소 접근 토큰').fill('synthetic-test-token');
+ await page.getByRole('button',{name:'연결하기',exact:true}).click();
+ const alert=page.getByRole('alert');
+ await expect(alert).toContainText(`${failure.stage} 실패 (404)`);
+ await expect(alert).toContainText('Only select repositories: career-radar');
+ await expect(alert).toContainText('Contents: Read and write');
+ await expect(page.getByLabel('GitHub 저장소 접근 토큰')).toHaveValue('');
+ await expect(page.getByText('테스트 기업',{exact:true})).toHaveCount(0);
+ await expect(page.locator('body')).not.toContainText('synthetic-test-token');
+ expect(await page.evaluate(()=>Object.keys(localStorage))).toEqual([]);
+});
 test('applications separated, memo survives stage save and reload',async({page})=>{await mock(page);await login(page);await page.getByRole('button',{name:'채용공고',exact:true}).click();await expect(page.getByText('테스트 기업',{exact:true})).toBeVisible();await expect(page.getByText('전형 기업',{exact:true})).toHaveCount(0);await page.getByRole('button',{name:'진행 중',exact:true}).click();await expect(page.getByText('전형 기업',{exact:true})).toBeVisible();await page.getByRole('button',{name:'수정',exact:true}).click();await page.getByLabel('전형 단계',{exact:true}).selectOption('1차 면접');await page.getByRole('button',{name:'변경 저장'}).click();await expect(page.getByRole('status')).toContainText('저장하고 재조회');await page.getByRole('button',{name:'새로고침',exact:true}).click();await expect(page.getByText('1차 면접',{exact:true})).toBeVisible();await page.getByRole('button',{name:'FDE',exact:true}).click();await expect(page.getByText('보존할 메모',{exact:true})).toBeVisible();expect(await page.evaluate(()=>JSON.stringify(localStorage))).not.toContain('synthetic-test-token');});
 test('conflicting writes show an error and keep edit form',async({page})=>{await mock(page,true);await login(page);await page.getByRole('button',{name:'채용공고',exact:true}).click();await page.getByRole('button',{name:'수정',exact:true}).click();await page.getByLabel('개인 메모',{exact:true}).fill('새 메모');await page.getByRole('button',{name:'변경 저장'}).click();await expect(page.getByRole('alert').filter({hasText:'다른 기기'})).toContainText('다른 기기');await expect(page.getByRole('dialog',{name:'공고 수정'})).toBeVisible();});
 test('mobile has no horizontal document overflow',async({page})=>{await mock(page);await login(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);});
