@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {editJob,stage,applied,closed,merged,safeUrl} from '../lib/model.ts';
+import type {UserState,Item} from '../lib/model.ts';
+const user:UserState={jobs:{one:{status:'지원완료',notes:'keep'}},profile:{},tasks:[],settings:{}};
+const job:Item={id:'one',title:'AI Engineer',status:'지원완료',notes:'keep'};
+test('legacy applied jobs get display stage without invented dates',()=>{assert.equal(stage(job),'서류 제출');assert.equal(applied(job),true);assert.equal(closed(job),false);assert.equal(job.applyDate,undefined);});
+test('stage changes append history and preserve notes',()=>{const next=editJob(user,job,{applicationStage:'1차 면접'});assert.equal(next.jobs.one.notes,'keep');assert.equal((next.jobs.one.applicationHistory as unknown[]).length,1);assert.equal(user.jobs.one.applicationHistory,undefined);});
+test('editing only a note does not freeze unrelated facts',()=>{const next=editJob(user,job,{title:'AI Engineer',notes:'new'});assert.equal(next.jobs.one.title,undefined);assert.deepEqual(next.jobs.one.manualFields,[]);});
+test('manual fact override is protected and close stage goes to history',()=>{const next=editJob(user,job,{title:'My title',applicationStage:'불합격'});assert.deepEqual(next.jobs.one.manualFields,['title']);assert.equal(closed({...job,...next.jobs.one}),true);});
+test('unsafe original links cannot execute scripts',()=>{assert.equal(safeUrl('javascript:alert(1)'),undefined);assert.equal(safeUrl('http://x.test'),undefined);assert.equal(safeUrl('https://x.test'),'https://x.test/');});
