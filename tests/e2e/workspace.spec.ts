@@ -29,7 +29,7 @@ for(const failure of [
  await page.goto('/career-radar-web/');
  await page.getByLabel('GitHub 저장소 접근 토큰').fill('synthetic-test-token');
  await page.getByRole('button',{name:'연결하기',exact:true}).click();
- const alert=page.getByRole('alert');
+ const alert=page.getByRole('alert').filter({hasText:'실패'});
  await expect(alert).toContainText(`${failure.stage} 실패 (404)`);
  await expect(alert).toContainText('Only select repositories: career-radar');
  await expect(alert).toContainText('Contents: Read and write');
