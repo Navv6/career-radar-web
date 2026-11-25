@@ -17,3 +17,7 @@ npm run test:e2e
 ```
 
 Public frontend configuration: `/career-radar-web/`. No OpenAI API key or GitHub secret is required for building or deploying the shell.
+
+Live site: https://navv6.github.io/career-radar-web/
+
+Build, model tests (5), desktop/mobile UI tests (8), public artifact audit and deployment passed in [Actions run 45582513791](https://github.com/Navv6/career-radar-web/actions/runs/45582513791). The deployed anonymous connection screen was checked in a browser. Real owner-authenticated read/write remains a separate acceptance check; the automated UI tests use synthetic data.
